@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.db
+
+# Virtual Environment
+venv/
+env/
+*.egg-info/
+
+# Environment variables file
+.env
+
+# Docker files and directories
+*.log
+*.tar
+*.img
+docker-compose.override.yml
+build/
+tmp/
+
+# IDE/editor files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# System files (macOS/Windows)
+.DS_Store
+Thumbs.db
