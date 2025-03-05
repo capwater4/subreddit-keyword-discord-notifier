@@ -9,8 +9,9 @@ import time
 # This is important... for something
 nest_asyncio.apply()
 
-# Uncomment below line if building docker image locally
-load_dotenv()
+# Checking to see if env is local or via docker
+if os.getenv("ENVIRONMENT") == "local":
+    load_dotenv()
 
 # Getting variables from docker-compose.yml
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
@@ -62,7 +63,7 @@ async def clean_expired_posts():
             if current_time - timestamp > expiration_time:
                 del sent_posts[post_id]
         print("Expired posts cleaned.")
-        await asyncio.sleep(3600)  # Clean expired posts every hour
+        await asyncio.sleep(3600)  # Check expired posts every hour
 
 
 async def check_keywords_notify():

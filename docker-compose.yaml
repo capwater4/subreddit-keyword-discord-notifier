@@ -4,6 +4,7 @@ services:
     image: capwater4/skdn
     restart: always
     environment:
+      - ENVIRONMENT=docker
       - DISCORD_TOKEN=
       - REDDIT_CLIENT_ID=
       - REDDIT_CLIENT_SECRET=
