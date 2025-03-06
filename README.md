@@ -1,6 +1,6 @@
 # Subreddit Scanner Discord Bot
 
-A discord bot that monitors a subreddit of your choosing and messages a discord channel whenever a new post with your keywords is found. Uses free OAUTH Reddit API token and asyncio with discord bots.
+A discord bot that monitors a subreddit of your choosing and messages a discord channel whenever a new post with your keywords is found. Uses free OAUTH Reddit API token and asyncio with your own discord bot.
 
 ## Setup
 
@@ -22,11 +22,11 @@ _Steps 1 and 2 are done together- you need the Oauth2 from step 1 to register fo
 These are the variables you will need to run the script:
 ```yml
     environment:
-      - DISCORD_TOKEN="yourtoken"
-      - REDDIT_CLIENT_ID="yourid"
-      - REDDIT_CLIENT_SECRET="yoursecret"
+      - DISCORD_TOKEN=yourtoken
+      - REDDIT_CLIENT_ID=yourid
+      - REDDIT_CLIENT_SECRET=yoursecret
       - REDDIT_USER_AGENT="User-Agent:subreddit keyword scanner by u/your_username"
-      - CHANNEL_ID="yourid"
+      - CHANNEL_ID=yourid
       - MONITOR_SUB="subreddit" #no r/, just the name
       - KEYWORDS="list, of, keywords"
       - ENABLE_WELCOME_MESSAGE=true #Sends a monitoring description to Discord on start
@@ -48,7 +48,7 @@ Run the above compose file and fill in the environment variables. That's it!
 Download all files above into 1 directory and build locally after filling out .env. 
 
 ### Python Script
-Uses python 3.9, probably compatible with other versions. Fill out .env.
+Uses python 3.9, probably compatible with other versions. Fill out .env within the same directory.
 
 ## Usage
 * By deafult, every 60 seconds the script will check the 10 most recent posts from your subreddit for keywords
@@ -59,4 +59,4 @@ The script stays well below Reddit's 100 calls per minute free tier and you can 
 
 Posts sent to discord will be stored and "expired" every week so that duplicates are not sent if the same post is scanned twice.
 
-If you have any questions/suggestions or just need some help running/using the bot, you can raise an issue or message me on reddit at u/Resolute_Pecan.
+If you have any questions/suggestions or just need some help using the bot, you can raise an issue or message me on reddit at u/Resolute_Pecan.
