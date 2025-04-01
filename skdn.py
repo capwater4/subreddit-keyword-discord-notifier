@@ -3,129 +3,199 @@ import asyncio
 import asyncpraw
 import nest_asyncio
 import os
+import json
 from dotenv import load_dotenv
 import time
+from datetime import datetime
 
-# This is important... for something
+# Apply nest_asyncio if needed
 nest_asyncio.apply()
 
-# Checking to see if env is local or via docker
+# Environment setup
 if os.getenv("ENVIRONMENT") == "local":
     load_dotenv()
 
-# Getting variables from docker-compose.yml
+# Configuration
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 REDDIT_CLIENT_ID = os.getenv("REDDIT_CLIENT_ID")
 REDDIT_CLIENT_SECRET = os.getenv("REDDIT_CLIENT_SECRET")
 REDDIT_USER_AGENT = os.getenv("REDDIT_USER_AGENT")
 CHANNEL_ID = int(os.getenv("CHANNEL_ID"))
-MONITOR_SUB = os.getenv("MONITOR_SUB").strip('"')
+MONITOR_SUB = os.getenv("MONITOR_SUB").strip('"').lower()
 KEYWORDS = os.getenv("KEYWORDS").strip('"')
 ENABLE_WELCOME_MESSAGE = (
     os.getenv("ENABLE_WELCOME_MESSAGE", "true").strip().lower() == "true"
 )
-NEW_POST_COUNT = int(os.getenv("NEW_POST_COUNT", 10))
-CHECK_FREQUENCY = int(os.getenv("CHECK_FREQUENCY", 60))
+NEW_POST_COUNT = int(os.getenv("NEW_POST_LIMIT", 15))
+CHECK_FREQUENCY = int(os.getenv("CHECK_FREQUENCY", 30))
 
-# Split KEYWORDS string into a list, removing any whitespaces
-keywords_list = [keyword.strip() for keyword in KEYWORDS.split(",")]
+# Process keywords
+keywords_list = [keyword.strip().lower() for keyword in KEYWORDS.split(",")]
 
-# Reddit API credentials and Async PRAW setup
+# Reddit client setup
 reddit = asyncpraw.Reddit(
     client_id=REDDIT_CLIENT_ID,
     client_secret=REDDIT_CLIENT_SECRET,
     user_agent=REDDIT_USER_AGENT,
 )
 
-# Intents needed to start discord client
+# Discord client setup
 intents = discord.Intents.default()
-intents.message_content = True  # Ensure the bot can read message content
-
-# Create a client instance of the bot
+intents.message_content = True
 client = discord.Client(intents=intents)
 
-# Limit to the most recent posts (e.g., 100 posts)
-MAX_HISTORY_SIZE = 100
+# Persistent storage setup
+STORAGE_DIR = "/post/log"
+STORAGE_FILE = os.path.join(STORAGE_DIR, "sent_posts.json")
+SENT_POSTS = {}
+EXPIRATION_DAYS = 7  # Keep posts for 1 week
 
-# Dictionary to hold post IDs and their timestamp
-sent_posts = {}
 
-# Expiration time for posts in seconds (1 week in this case)
-expiration_time = 604800  # 1 week in seconds
+def ensure_storage_dir():
+    """Ensure the storage directory exists"""
+    if not os.path.exists(STORAGE_DIR):
+        os.makedirs(STORAGE_DIR)
+        print(f"Created storage directory: {STORAGE_DIR}")
+
+
+def load_sent_posts():
+    """Load sent posts from JSON file"""
+    global SENT_POSTS
+    try:
+        ensure_storage_dir()
+        if os.path.exists(STORAGE_FILE):
+            with open(STORAGE_FILE, "r") as f:
+                SENT_POSTS = json.load(f)
+                # Convert string timestamps back to float
+                SENT_POSTS = {k: float(v) for k, v in SENT_POSTS.items()}
+        print(f"Loaded {len(SENT_POSTS)} sent posts from storage")
+    except Exception as e:
+        print(f"Error loading sent posts: {e}")
+        SENT_POSTS = {}
+
+
+def save_sent_posts():
+    """Save sent posts to JSON file"""
+    try:
+        ensure_storage_dir()
+        with open(STORAGE_FILE, "w") as f:
+            json.dump(SENT_POSTS, f)
+        print(f"Saved {len(SENT_POSTS)} sent posts to storage")
+    except Exception as e:
+        print(f"Error saving sent posts: {e}")
 
 
 async def clean_expired_posts():
-    """Periodically clean up expired posts from `sent_posts`."""
+    """Periodically clean up expired posts"""
     while True:
         current_time = time.time()
-        # Remove posts older than expiration_time (e.g., 1 week)
-        for post_id, timestamp in list(sent_posts.items()):
-            if current_time - timestamp > expiration_time:
-                del sent_posts[post_id]
-        print("Expired posts cleaned.")
-        await asyncio.sleep(3600)  # Check expired posts every hour
+        expired = [
+            pid
+            for pid, ts in SENT_POSTS.items()
+            if current_time - ts > EXPIRATION_DAYS * 86400
+        ]
+        for pid in expired:
+            del SENT_POSTS[pid]
+        if expired:
+            print(f"Cleaned {len(expired)} expired posts")
+            save_sent_posts()
+        await asyncio.sleep(3600)  # Clean every hour
 
 
 async def check_keywords_notify():
+    """Check for new posts and notify Discord"""
     subreddit = await reddit.subreddit(MONITOR_SUB)
     while True:
-        # Check the 10 most recent posts
-        async for submission in subreddit.new(limit=NEW_POST_COUNT):
-            # If the title contains any of the keywords and this post hasn't been sent yet
-            if any(
-                keyword.lower() in submission.title.lower() for keyword in keywords_list
-            ):
-                if submission.id not in sent_posts:
-                    print("")
-                    message = f"New post found: {submission.title}\n{submission.url}"
-                    print(message)
+        try:
+            # Check new posts
+            async for submission in subreddit.new(limit=NEW_POST_COUNT):
+                title_lower = submission.title.lower()
 
-                    # Send the post title to the Discord channel, print API usage
-                    channel = client.get_channel(CHANNEL_ID)
-                    if channel:
+                # Skip if already sent or doesn't match keywords
+                if submission.id in SENT_POSTS:
+                    continue
+
+                if not any(keyword in title_lower for keyword in keywords_list):
+                    continue
+
+                # Prepare and send message
+                message = f"New post: {submission.title}\n{submission.url}"
+                print(f"Processing: {message}")
+
+                channel = client.get_channel(CHANNEL_ID)
+                if channel:
+                    try:
                         await channel.send(message)
+                        SENT_POSTS[submission.id] = time.time()
+                        print(f"Sent notification for: {submission.title}")
+                        save_sent_posts()  # Save after each new post
+                    except Exception as e:
+                        print(f"Discord send error: {e}")
 
-                    # Add post to sent_posts with current timestamp
-                    sent_posts[submission.id] = time.time()
+                # Small delay to avoid rate limits
+                await asyncio.sleep(1)
 
-                    print(f"Sent notification for: {submission.title}")
-                    print(f"Rate limit: {reddit.auth.limits}")
+            # Check rate limits
+            try:
+                limits = await reddit.auth.limits()
+                if limits["remaining"] < 5:
+                    sleep_time = max(0, limits["reset_timestamp"] - time.time()) + 2
+                    print(f"Rate limit approaching, sleeping {sleep_time:.1f}s")
+                    await asyncio.sleep(sleep_time)
+            except Exception as e:
+                print(f"Rate limit check error: {e}")
 
-                    # Check rate limits and wait if necessary
-                    if reddit.auth.limits["remaining"] == 0:
-                        reset_time = reddit.auth.limits["reset_timestamp"]
-                        await asyncio.sleep(max(0, reset_time - time.time()))
+        except Exception as e:
+            print(f"Main loop error: {e}")
+            await asyncio.sleep(60)
 
-        # Sleep for the check frequency (e.g., 60 seconds)
         await asyncio.sleep(CHECK_FREQUENCY)
 
 
 @client.event
 async def on_ready():
-    # This function will be called when the bot has connected to Discord
-    print(f"Logged in as {client.user}")
+    """Handle bot startup"""
+    print(f"Logged in as {client.user} (ID: {client.user.id})")
+    print(f"Monitoring r/{MONITOR_SUB} for: {', '.join(keywords_list)}")
 
-    # Start the Reddit post-checking task
-    client.loop.create_task(
-        check_keywords_notify()
-    )  # Add the Reddit checking task to the event loop
+    # Load previous sent posts
+    load_sent_posts()
 
-    # Start the task to clean expired posts every hour
+    # Start tasks
+    client.loop.create_task(check_keywords_notify())
     client.loop.create_task(clean_expired_posts())
 
-    # Send a welcome message to the Discord channel
-    channel = client.get_channel(CHANNEL_ID)
-    if channel and ENABLE_WELCOME_MESSAGE:
-        await channel.send(
-            f"Monitoring the r/{MONITOR_SUB} subreddit for {KEYWORDS} keywords"
-        )
+    # Send welcome message
+    if ENABLE_WELCOME_MESSAGE:
+        channel = client.get_channel(CHANNEL_ID)
+        if channel:
+            await channel.send(
+                f"Bot restarted at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+                f"Monitoring r/{MONITOR_SUB} for: {', '.join(keywords_list)}\n"
+                f"Loaded {len(SENT_POSTS)} previously sent posts"
+            )
 
 
-# Manually run the bot's event loop
+@client.event
+async def on_disconnect():
+    """Handle bot shutdown"""
+    print("Bot disconnecting, saving sent posts...")
+    save_sent_posts()
+
+
 async def main():
-    await client.start(DISCORD_TOKEN)
+    """Main entry point"""
+    try:
+        await client.start(DISCORD_TOKEN)
+    except KeyboardInterrupt:
+        print("\nBot shutting down...")
+        save_sent_posts()
+    except Exception as e:
+        print(f"Fatal error: {e}")
+        save_sent_posts()
+    finally:
+        await client.close()
 
 
-# Use asyncio to run the main function
 if __name__ == "__main__":
     asyncio.run(main())

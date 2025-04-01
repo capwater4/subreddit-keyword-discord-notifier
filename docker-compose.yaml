@@ -15,3 +15,5 @@ services:
       - ENABLE_WELCOME_MESSAGE=true #optional
       - NEW_POST_LIMIT=10 #optional
       - CHECK_FREQUENCY=60 #optional
+    volumes:
+      - /path/to/folder:/post/log
