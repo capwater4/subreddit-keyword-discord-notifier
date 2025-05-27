@@ -9,6 +9,7 @@ __pycache__/
 venv/
 env/
 *.egg-info/
+.venv/
 
 # Environment variables file
 .env
