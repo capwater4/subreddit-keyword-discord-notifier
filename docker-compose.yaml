@@ -1,19 +1,16 @@
 services:
   reddit-keywords-discord-notifier:
     container_name: skdn
-    image: capwater4/skdn
+    image: skdn
     restart: always
     environment:
-      - ENVIRONMENT=docker
-      - DISCORD_TOKEN=
-      - REDDIT_CLIENT_ID=
-      - REDDIT_CLIENT_SECRET=
+      - DISCORD_TOKEN=yourtoken
+      - CHANNEL_ID=yourid
+      - REDDIT_CLIENT_ID=yourid
+      - REDDIT_CLIENT_SECRET=yoursecret
       - REDDIT_USER_AGENT="User-Agent:subreddit keyword scanner by u/your_username"
-      - CHANNEL_ID=
-      - MONITOR_SUB="adviceanimals" #no r/, replace with your own
-      - KEYWORDS="dog, cat" #comma separate multiple keywords
-      - ENABLE_WELCOME_MESSAGE=true #optional
-      - NEW_POST_LIMIT=10 #optional
-      - CHECK_FREQUENCY=60 #optional
-    volumes:
-      - /path/to/folder:/post/log
+      - MONITOR_SUB="subreddit" # no r/, just the name
+      - KEYWORDS="list,of,keywords"
+      - ENABLE_WELCOME_MESSAGE=true # sends a monitoring description to Discord on start
+      - NEW_POST_LIMIT=10 # specifies the # of new posts that are scanned per check
+      - CHECK_FREQUENCY=60 # controls how often the script checks your subreddit
