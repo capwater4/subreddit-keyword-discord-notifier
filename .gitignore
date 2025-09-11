@@ -18,8 +18,8 @@ env/
 *.log
 *.tar
 *.img
-docker-compose.override.yml
-build/
+docker-compose.yaml
+docker-compose.yml
 tmp/
 
 # IDE/editor files
