@@ -6,7 +6,6 @@ import os
 import logging
 from dotenv import load_dotenv
 
-
 if os.path.exists("/.dockerenv"):
     log_dir = "/app/logs"
 else:
