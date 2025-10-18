@@ -6,10 +6,21 @@ import os
 import logging
 from dotenv import load_dotenv
 
+if os.path.exists("/.dockerenv"):
+    log_dir = "/app/logs"
+else:
+    log_dir = "./logs"
+os.makedirs(log_dir, exist_ok=True)
 
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    handlers=[
+        logging.FileHandler(f"{log_dir}/skdn.log"),
+        logging.StreamHandler(),
+    ],
 )
+
 nest_asyncio.apply()
 load_dotenv()
 
@@ -75,7 +86,9 @@ async def on_ready():
     channel = client.get_channel(channel_id)
     if channel and welcome_message.lower() == "true":
         try:
-            await channel.send(f"Monitoring {subreddit} for keywords: {', '.join(keywords)}")
+            await channel.send(
+                f"Monitoring {subreddit} for keywords: {', '.join(keywords)}"
+            )
             logging.info("Sent welcome message.")
         except Exception as e:
             logging.error(f"Failed to send welcome message: {e}")

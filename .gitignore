@@ -31,3 +31,6 @@ tmp/
 # System files (macOS/Windows)
 .DS_Store
 Thumbs.db
+
+# Mah Logs
+logs/
