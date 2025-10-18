@@ -1,0 +1,9 @@
+services:
+  subreddit-keywords-discord-notifier:
+    image: capwater4/skdn
+    container_name: skdn
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - TZ=America/Chicago

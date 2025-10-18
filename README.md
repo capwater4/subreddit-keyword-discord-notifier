@@ -18,22 +18,23 @@ A discord bot that monitors a subreddit of your choosing and messages a discord 
    * Paste your generated URL and add your bot to your server. Make sure it can access your designated channel
   
 _Steps 1 and 2 are done together- you need the Oauth2 from step 1 to register for API usage in step 2_
-## Environment
+## Environment Variables
 These are the variables you will need to run the script:
-```yml
-    environment:
-      - DISCORD_TOKEN=yourtoken
-      - REDDIT_CLIENT_ID=yourid
-      - REDDIT_CLIENT_SECRET=yoursecret
-      - REDDIT_USER_AGENT="User-Agent:subreddit keyword scanner by u/your_username"
-      - CHANNEL_ID=yourid
-      - MONITOR_SUB="subreddit" #no r/, just the name
-      - KEYWORDS="list, of, keywords"
-      - ENABLE_WELCOME_MESSAGE=true #Sends a monitoring description to Discord on start
-      - NEW_POST_LIMIT=10 #specifies the # of new posts that are 
-      - CHECK_FREQUENCY=60 #controls how often the script checks your subreddit
-```
-Welcome message, post limit and check frequency are optional and will default to the values shown above. You may need to adjust these based on how active the subreddit is. Either use .env or fill these out in docker compose, not both. 
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| DISCORD_TOKEN | Your Discord bot token | Required |
+| REDDIT_CLIENT_ID | Reddit API client ID from app creation | Required |
+| REDDIT_CLIENT_SECRET | Reddit API secret from app creation | Required |
+| REDDIT_USER_AGENT | Identifier for Reddit API requests | Required |
+| CHANNEL_ID | Discord channel ID to post notifications | Required |
+| MONITOR_SUB | Subreddit name to monitor (without r/) | Required |
+| KEYWORDS | Comma-separated keywords to match in post titles | Required |
+| ENABLE_WELCOME_MESSAGE | Send a message when bot starts | true |
+| NEW_POST_LIMIT | Number of recent posts to check each cycle | 10 |
+| CHECK_FREQUENCY | Seconds between checks | 60 |
+
+Rename .env.example to .env and fill in these variables.
 
 ## Installation
 Clone the repo or download the zip. There are 3 ways of running the script:
@@ -42,13 +43,13 @@ Clone the repo or download the zip. There are 3 ways of running the script:
 - Running the python script locally
 
 ### Docker Compose
-Run the above compose file and fill in the environment variables. That's it!
+Run the included compose file and fill in the environment variables in a .env file.
 
 ### Building Docker Locally
 Download all files above into 1 directory and build locally after filling out .env. 
 
 ### Python Script
-Uses python 3.9, probably compatible with other versions. Fill out .env within the same directory.
+Uses python 3.11, probably compatible with other versions. Fill out .env within the same directory.
 
 ## Usage
 * By deafult, every 60 seconds the script will check the 10 most recent posts from your subreddit for keywords
@@ -57,6 +58,6 @@ Uses python 3.9, probably compatible with other versions. Fill out .env within t
 
 The script stays well below Reddit's 100 calls per minute free tier and you can see your usage within the container logs. It continuously checks your remaining calls limit and will timeout if you hit the limit. 
 
-Posts sent to discord will be stored and "expired" every week so that duplicates are not sent if the same post is scanned twice.
+Posts sent to discord are stored so that duplicates are not sent if the same post is scanned twice.
 
 If you have any questions/suggestions or just need some help using the bot, you can raise an issue or message me on reddit at u/Resolute_Pecan.

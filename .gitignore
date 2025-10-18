@@ -18,8 +18,6 @@ env/
 *.log
 *.tar
 *.img
-docker-compose.yaml
-docker-compose.yml
 tmp/
 
 # IDE/editor files
